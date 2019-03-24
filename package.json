@@ -1,0 +1,36 @@
+{
+  "name": "xi18n-plus",
+  "version": "0.0.1",
+  "description": "Leveled-up Angular xi18n tool",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alomardev/xi18n-plus.git"
+  },
+  "keywords": [
+    "xi18n",
+    "angular",
+    "translation",
+    "xlf"
+  ],
+  "author": "Abdulrahman M. Alomar",
+  "license": "MIT",
+  "bin": {
+    "xi18n-plus": "./index.js",
+    "xi18n-plus-extract": "./index-extract.js"
+  },
+  "bugs": {
+    "url": "https://github.com/alomardev/xi18n-plus/issues"
+  },
+  "homepage": "https://github.com/alomardev/xi18n-plus#readme",
+  "dependencies": {
+    "commander": "^2.19.0",
+    "xml-js": "^1.6.11"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^5.0.5"
+  }
+}
