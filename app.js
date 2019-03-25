@@ -1,6 +1,12 @@
 var fs = require('fs');
 var exec = require('child_process').exec;
 var convertXml = require('xml-js');
+var _ = require('lodash');
+
+var bin = {
+  xi18n: './node_modules/.bin/ng',
+  ngxExtractor: './node_modules/.bin/ngx-extractor',
+};
 
 module.exports = {
 
@@ -104,8 +110,19 @@ module.exports = {
    */
   saveFile: function(path, rootElement) {
     var output = convertXml.js2xml(rootElement, {
-      spaces: 2
+      spaces: 2,
+      attributeValueFn: (attributeValue) => {
+        return _.escape(attributeValue);
+      },
+      textFn: (value) => {
+        return _.escape(value);
+      }
     });
+    output = output
+    .replace(/\n\s*(<x|<\/source>|<\/target>)/g, '$1')
+    .replace(/ \s+<x/g, ' ')
+    .replace(/(<source>|<target>)\s+/g, '$1')
+    .replace(/\s+(<\/source>|<\/target>)/g, '$1');
     process.chdir('src');
     fs.writeFileSync(path, output, { encoding: 'utf8' });
     process.chdir('..');
@@ -142,7 +159,7 @@ module.exports = {
     var file;
     for (var i = 0; i < args.length; i++) {
       var arg = args[i];
-      if (arg.startsWith('--outFile')) {
+      if (arg.startsWith('--outFile') || arg.startsWith('--out-file') || arg.startsWith('-of')) {
         if (arg.indexOf('=') != -1) {
           file = arg.split('=')[1];
         } else {
@@ -201,20 +218,75 @@ module.exports = {
   },
 
   /**
+   * Trim the content of the element.
+   * First element will start with no whitespaces,
+   * last element will end with no whitespaces,
+   * Trailled spaces will be considered as a single space.
+   *
+   * All middle whitespaces will be compressed to one space
+   *
+   * @param {convertXml.Element} element
+   */
+  trimElement: function(element, compress = false) {
+    var elements = element.elements;
+    for (var i = 0; i < elements.length; i++) {
+      var e = elements[i];
+
+      if (e.type !== 'text') {
+        continue;
+      }
+
+      if (i === 0) {
+        e.text = e.text.replace(/^\s+/g, '');
+      }
+      if (i === elements.length - 1) {
+        e.text = e.text.replace(/\s+$/g, '');
+      }
+      if (i !== elements.length - 1 || compress) {
+        e.text = e.text.replace(/\s+$/g, ' ');
+      }
+    }
+  },
+
+  /**
    * Executes ng xi18n with arguments
    *
    * @param {string} args ng xi18n arguments
    * @param {() => void} callback
    */
   xi18n: function(args, callback) {
-    console.log(`Executing 'ng xi18n ${args}'...`)
-    exec(`ng xi18n ${args}`, (err) => {
+    if (!fs.existsSync(`${bin.xi18n}`)) {
+      console.error(`Coudln't find ng command`);
+      return;
+    }
+    console.log(`Executing 'ng xi18n ${args}'...`);
+    var child = exec(`${bin.xi18n} xi18n ${args}`, (err) => {
       if (err) {
         console.error(`Error occured while executing ng xi18n ${args}`);
         return;
       }
+      this.ngxExtractor(this.getOutputFile(args.split(' ')), callback);
+    });
+    child.stdout.pipe(process.stdout);
+    // TODO: Output the content of the child_process
+  },
+
+  ngxExtractor(outFile, callback) {
+    outFile = outFile.startsWith('/') ? 'src' + outFile : 'src/' + outFile;
+    if (!fs.existsSync(`${bin.ngxExtractor}`)) {
+      console.error(`Coudln't find ngx-extract command`);
+      callback();
+      return;
+    }
+    console.log(`Executing 'ngx-extractor --input src/**/*.ts --out-file ${outFile}'...`);
+    var child = exec(`${bin.ngxExtractor} --input src/**/*.ts --out-file ${outFile}`, (err) => {
+      if (err) {
+        console.error(`Error occured while executing ngx-extractor --input src/**/*.ts --out-file ${outFile}`);
+        return;
+      }
       callback();
     });
+    child.stdout.on('data', (data) => console.log(data));
     // TODO: Output the content of the child_process
   }
 

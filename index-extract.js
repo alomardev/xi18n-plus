@@ -4,10 +4,12 @@ var app = require('./app');
 
 program
   .allowUnknownOption()
+  .option('--outFile', 'point to the messages file')
   .parse(process.argv);
+
 var filePath = app.getOutputFile(program.rawArgs);
 if (!filePath) {
-  console.error('--outFile should be provided');
+  console.error('--outFile, --out-file, or -of should be provided');
   process.exit(1);
 }
 
