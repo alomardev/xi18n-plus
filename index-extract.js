@@ -13,12 +13,12 @@ if (!filePath) {
   process.exit(1);
 }
 
-app.backupFile(filePath);
+//app.backupFile(filePath);
 
-var originalXmlElement = app.parseFile(filePath);
+var originalXml = app.loadFile(filePath);
 var translations;
-if (originalXmlElement) {
-  translations = app.extractTranslations(originalXmlElement);
+if (originalXml) {
+  translations = app.extractTranslations(originalXml);
 }
 
 app.xi18n(process.argv.slice(2).join(' '), () => {
@@ -26,10 +26,9 @@ app.xi18n(process.argv.slice(2).join(' '), () => {
     console.warn('Appending old translations is skipped');
     return;
   }
-
-  var outputElement = app.appendTranslations(translations, app.parseFile(filePath));
-
-  app.saveFile(filePath, outputElement);
+  var content = app.loadFile(filePath);
+  var outputXml = app.appendTranslations(translations, content);
+  app.saveFile(filePath, outputXml);
 
   console.log('Translations appended successfully');
 });

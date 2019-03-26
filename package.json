@@ -28,8 +28,7 @@
   "homepage": "https://github.com/alomardev/xi18n-plus#readme",
   "dependencies": {
     "commander": "^2.19.0",
-    "lodash": "^4.17.11",
-    "xml-js": "^1.6.11"
+    "lodash": "^4.17.11"
   },
   "devDependencies": {
     "@types/fs-extra": "^5.0.5"

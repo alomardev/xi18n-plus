@@ -1,6 +1,5 @@
 var fs = require('fs');
 var exec = require('child_process').exec;
-var convertXml = require('xml-js');
 var _ = require('lodash');
 
 var bin = {
@@ -30,49 +29,53 @@ module.exports = {
   /**
    * Extract translation from trans-unit elements
    *
-   * @param {convertXml.Element} rootElement XML element
-   * @returns {{[key: string]: convertXml.Element}} Translations
+   * @param {string} xml XML data
+   * @returns {{[key: string]: string}} Translations
    */
-  extractTranslations: function(rootElement) {
+  extractTranslations: function(xml) {
     console.log('Extracting translation units...');
-    var targets = {};
+
+    var translations = {};
+    var lastTransUnitIndex = 0;
     var i = 0;
-    var elements = this.getElement(rootElement, 'xliff.file.body').elements;
-    for (var e of elements) {
-      if (e.name !== 'trans-unit') {
-        continue;
+    while (true) {
+      var transUnitIndex = xml.indexOf('<trans-unit', lastTransUnitIndex);
+      if (transUnitIndex === -1) break;
+
+      var fromIndex = transUnitIndex + 11;
+      var toIndex = xml.indexOf('</trans-unit>', fromIndex);
+
+      var id = this.betweenIndices('id="', '"', fromIndex, toIndex, xml);
+      var target = this.betweenIndices('<target>', '</target>', fromIndex, toIndex, xml);
+
+      if (id && target) {
+        translations[id] = target;
+        i++;
       }
-      var target = this.getElement(e, 'target');
-      if (!target) continue;
-      i++;
-      targets[e.attributes.id] = target;
+
+      lastTransUnitIndex = toIndex;
     }
 
     console.log(`${i} trans-unit extracted`);
-    return targets;
+    return translations;
   },
 
   /**
-   * Get element from converted xml element
-   * by sequence of tag names
+   * Get text between two strings
    *
-   * @param {convertXml.Element} element XML element
-   * @param {string} tag Element path
-   * @returns {convertXml.Element} XML element
+   * @param {string} start Starting text
+   * @param {string} end Ending text
+   * @param {number} fromIndex Search starting index
+   * @param {number} toIndex Search ending index
+   * @param {string} xml XML data
    */
-  getElement: function(element, tag) {
-    var segs = tag.split('.');
-    for (var e of element.elements) {
-      if (e.name === segs[0]) {
-        if (segs.length > 1) {
-          segs.splice(0, 1);
-          return this.getElement(e, segs.join('.'));
-        } else {
-          return e;
-        }
-      }
-    }
-    return null;
+  betweenIndices: function(start, end, fromIndex, toIndex, xml) {
+    var startLen = start.length;
+    var startIndex = xml.indexOf(start, fromIndex);
+    if (startIndex === -1 || startIndex > toIndex) return null;
+    var endIndex = xml.indexOf(end, startIndex + startLen);
+    if (endIndex === -1 || endIndex > toIndex) return null;
+    return xml.substring(startIndex + startLen, endIndex);
   },
 
   /**
@@ -106,42 +109,32 @@ module.exports = {
    * Save file to the specified path
    *
    * @param {string} path Output file path
-   * @param {convertXml.Element} rootElement XML element
+   * @param {string} xml XML data
    */
-  saveFile: function(path, rootElement) {
-    var output = convertXml.js2xml(rootElement, {
-      spaces: 2,
-      attributeValueFn: (attributeValue) => {
-        return _.escape(attributeValue);
-      },
-      textFn: (value) => {
-        return _.escape(value);
-      }
-    });
-    output = output
-    .replace(/\n\s*(<x|<\/source>|<\/target>)/g, '$1')
-    .replace(/ \s+<x/g, ' ')
-    .replace(/(<source>|<target>)\s+/g, '$1')
-    .replace(/\s+(<\/source>|<\/target>)/g, '$1');
+  saveFile: function(path, xml) {
+    var output = xml
+      .replace(/\n\s*(\s?)(<x|<\/source>|<\/target>)/g, '$1')
+      .replace(/ \s+<x/g, ' ')
+      .replace(/(<source>|<target>)\s+/g, '$1')
+      .replace(/\s+(<\/source>|<\/target>)/g, '$1')
+      .replace(/([ \t]*)<\/trans-unit><trans-unit/g, '$1</trans-unit>\n$1<trans-unit');
     process.chdir('src');
     fs.writeFileSync(path, output, { encoding: 'utf8' });
     process.chdir('..');
   },
 
   /**
-   * Parse xml file
+   * Load xml file
    *
    * @param {string} path File path
-   * @returns {convertXml.Element} XML element
+   * @returns {string} XML data
    */
-  parseFile: function(path) {
-    console.log(`Parsing ${path}...`);
-
+  loadFile: function(path) {
+    console.log(`Loading ${path}...`);
     process.chdir('src');
     var result;
     if (fs.existsSync(path)) {
-      var rawXml = fs.readFileSync(path, { encoding: 'utf8' });
-      result = convertXml.xml2js(rawXml);
+      result = fs.readFileSync(path, { encoding: 'utf8' });
     } else {
       console.error(`The file ${path} doesn't exist`);
     }
@@ -174,78 +167,45 @@ module.exports = {
   },
 
   /**
-   * Appends the passed translation to the xml element
+   * Appends the passed translation to xml data
    *
-   * @param {{[key: string]: convertXml.Element}} translations
-   * @param {convertXml.Element} rootElement XML element
-   * @returns {convertXml.Element} New XML element with translations
+   * @param {{[key: string]: string}} translations
+   * @param {string} xml XML data
+   * @returns {string} XML data with translations
    */
-  appendTranslations: function(translations, rootElement) {
-    var transKeys = Object.keys(translations);
-    if (!transKeys.length === 0) {
-      return;
-    }
-    var cloned = this.clone(rootElement);
-    var bodyElements = this.getElement(cloned, 'xliff.file.body').elements;
-    for (var e of bodyElements) {
-      if (e.name !== 'trans-unit') {
-        continue;
-      }
-      var key = e.attributes.id;
-      var index = transKeys.indexOf(key);
-      if (index >= 0) {
-        var sourceIndex = 0;
-        for (var i = 0; i < e.elements.length; i++) {
-          if (e.elements[i].name === 'source') {
-            sourceIndex = i;
+  appendTranslations: function(translations, xml) {
+    var lastTransUnitIndex = 0;
+    var keys = Object.keys(translations);
+    while (true) {
+      var transUnitIndex = xml.indexOf('<trans-unit', lastTransUnitIndex);
+      if (transUnitIndex === -1) break;
+
+      var fromIndex = transUnitIndex + 11;
+      var toIndex = xml.indexOf('</trans-unit>', fromIndex);
+
+      var id = this.betweenIndices('id="', '"', fromIndex, toIndex, xml);
+      var sourceCloseIndex = xml.indexOf('</source>', fromIndex);
+      var targetIndex = xml.indexOf('<target>', fromIndex);
+
+      var additionalChars = '';
+      if (keys.indexOf(id) !== -1 && (targetIndex === -1 || targetIndex > toIndex) && sourceCloseIndex < toIndex) {
+        var spaces = '';
+        var spaceCheckStartIndex = xml.indexOf('\n', fromIndex);
+        var spaceCheckEndIndex = xml.indexOf('\n', spaceCheckStartIndex + 1);
+        for (var c of xml.slice(spaceCheckStartIndex + 1, spaceCheckEndIndex)) {
+          if (c === ' ' || c === '\t') {
+            spaces += c;
+          } else {
             break;
           }
         }
-        e.elements.splice(sourceIndex + 1, 0, translations[key]);
-        transKeys.splice(index, 1);
+        additionalChars = '\n' + spaces + '<target>' + translations[id] + '</target>';
+        xml = xml.slice(0, sourceCloseIndex + 9) + additionalChars + xml.slice(sourceCloseIndex + 9);
       }
+
+      lastTransUnitIndex = toIndex + additionalChars.length;
     }
-
-    // give warning if there are missed keys
-    if (transKeys.length > 0) {
-      console.warn(`${transKeys.length} missed keys, for the following:`);
-      for (const k of transKeys) {
-        console.log(translations[k].source);
-      }
-    }
-
-    return cloned;
-  },
-
-  /**
-   * Trim the content of the element.
-   * First element will start with no whitespaces,
-   * last element will end with no whitespaces,
-   * Trailled spaces will be considered as a single space.
-   *
-   * All middle whitespaces will be compressed to one space
-   *
-   * @param {convertXml.Element} element
-   */
-  trimElement: function(element, compress = false) {
-    var elements = element.elements;
-    for (var i = 0; i < elements.length; i++) {
-      var e = elements[i];
-
-      if (e.type !== 'text') {
-        continue;
-      }
-
-      if (i === 0) {
-        e.text = e.text.replace(/^\s+/g, '');
-      }
-      if (i === elements.length - 1) {
-        e.text = e.text.replace(/\s+$/g, '');
-      }
-      if (i !== elements.length - 1 || compress) {
-        e.text = e.text.replace(/\s+$/g, ' ');
-      }
-    }
+    return xml;
   },
 
   /**
