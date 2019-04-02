@@ -1,6 +1,6 @@
 {
   "name": "xi18n-plus",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Leveled-up Angular xi18n tool",
   "main": "index.js",
   "scripts": {
