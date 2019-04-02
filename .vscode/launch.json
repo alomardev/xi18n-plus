@@ -8,9 +8,9 @@
       "type": "node",
       "request": "launch",
       "name": "Launch Program",
-      "program": "${workspaceFolder}/index-extract.js",
+      "program": "${workspaceFolder}/dist/index-export.js",
       "cwd": "/Users/Abdulrahman/Projects/general/web/simpleng-test",
-      "args": ["--outFile", "locale/messages.ar.xlf"]
+      "args": ["-o", "src/locale/translations.csv", "src/locale/messages.ar.xlf","src/locale/messages.en.xlf"]
     }
   ]
 }
