@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, createReadStream } from 'fs';
+import csv from 'csv-parser';
 
 export class App {
 
@@ -7,6 +8,8 @@ export class App {
     units: /<trans-unit((?!id=").|\n)*id="([\w.]+)"((?!>).|\n)*>(((?!<\/trans-unit>).|\n)*)<\/trans-unit>/g, // id: 2, content: 4
     source: /<source>(((?!<\/source>).|\n)*)<\/source>/, // content: 1
     target: /<target>(((?!<\/target>).|\n)*)<\/target>/, // content: 1
+    csvUnescape: /\\[ntfrb]/, // content: 1
+    csvEscape: /[\n\t\f\r\b]/, // content: 1
   }
 
   private fileContents: string[];
@@ -52,14 +55,51 @@ export class App {
       csv += '\n';
       i++;
     }
-    writeFileSync(output, csv, {encoding: 'utf-8'});
+    writeFileSync(output, csv, {encoding: 'utf8'});
     console.log(`CSV file generated successfully with ${i} translations of ${j} language(s)`)
+  }
+
+  importTranslationUnits(input: string) {
+    const translations = new TransUnits();
+    createReadStream(input).pipe(csv({
+      mapHeaders: ({header, index}) => {
+        const h = header.toLowerCase();
+        if (index > 1) {
+          translations.addLanguage(h);
+        }
+        return h;
+      },
+      mapValues: ({index, value}) => index > 0 ? this.unescape(value) : value
+    })).on('data', (row) => {
+      const {key, source} = row;
+      for (const k in row) {
+        if (k === 'key' || k === 'source') continue;
+        translations.addTransUnit(k, key, source, row[k]);
+      }
+    }).on('end', () => {
+      writeFileSync('test.xml', translations.toString('ar'), {encoding: 'utf8'});
+    });
   }
 
   private escape(content: string) {
     if (!content) return '';
-    const json = JSON.stringify(content);
-    return json.replace(/\\"/g, '""');
+    // TODO: Use regexp's conditional replace
+    return `"${content
+      .replace(/\n/g, '\\n')
+      .replace(/\t/g, '\\t')
+      .replace(/\f/g, '\\f')
+      .replace(/\r/g, '\\r')
+      .replace(/"/g, '""')}"`;
+  }
+
+  private unescape(content: string) {
+    if (!content) return '';
+    // TODO: Use regexp's conditional replace
+    return content
+      .replace(/\\n/g, '\n')
+      .replace(/\\t/g, '\t')
+      .replace(/\\f/g, '\f')
+      .replace(/\\r/g, '\r');
   }
 
 }
@@ -85,6 +125,23 @@ export class TransUnits {
 
   get(key: string) {
     return this.units[key];
+  }
+
+  toString(lang: string, indent: number = 2, offset: string = '') {
+    let tab = '';
+    while (indent-- > 0) {
+      tab += ' ';
+    }
+
+    let output = '';
+    for (const k of this.keys) {
+      const item = this.units[k];
+      output += `${offset}<trans-unit id="${k}">\n${offset + tab}` +
+      (item.source ? `<source>${item.source}</source>\n` : '') +
+      (item[lang] ? `${offset + tab}<target>${item[lang]}</target>\n` : '') +
+      `${offset}</trans-unit>\n`;
+    }
+    return output;
   }
 
 }

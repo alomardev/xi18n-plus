@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs_1 = require("fs");
+const csv_parser_1 = __importDefault(require("csv-parser"));
 class App {
     constructor(files) {
         this.regex = {
@@ -8,6 +12,8 @@ class App {
             units: /<trans-unit((?!id=").|\n)*id="([\w.]+)"((?!>).|\n)*>(((?!<\/trans-unit>).|\n)*)<\/trans-unit>/g,
             source: /<source>(((?!<\/source>).|\n)*)<\/source>/,
             target: /<target>(((?!<\/target>).|\n)*)<\/target>/,
+            csvUnescape: /\\[ntfrb]/,
+            csvEscape: /[\n\t\f\r\b]/,
         };
         this.fileContents = files.map(f => fs_1.readFileSync(f).toString());
     }
@@ -48,14 +54,51 @@ class App {
             csv += '\n';
             i++;
         }
-        fs_1.writeFileSync(output, csv, { encoding: 'utf-8' });
+        fs_1.writeFileSync(output, csv, { encoding: 'utf8' });
         console.log(`CSV file generated successfully with ${i} translations of ${j} language(s)`);
+    }
+    importTranslationUnits(input) {
+        const translations = new TransUnits();
+        fs_1.createReadStream(input).pipe(csv_parser_1.default({
+            mapHeaders: ({ header, index }) => {
+                const h = header.toLowerCase();
+                if (index > 1) {
+                    translations.addLanguage(h);
+                }
+                return h;
+            },
+            mapValues: ({ index, value }) => index > 0 ? this.unescape(value) : value
+        })).on('data', (row) => {
+            const { key, source } = row;
+            for (const k in row) {
+                if (k === 'key' || k === 'source')
+                    continue;
+                translations.addTransUnit(k, key, source, row[k]);
+            }
+        }).on('end', () => {
+            fs_1.writeFileSync('test.xml', translations.toString('ar'), { encoding: 'utf8' });
+        });
     }
     escape(content) {
         if (!content)
             return '';
-        const json = JSON.stringify(content);
-        return json.replace(/\\"/g, '""');
+        // TODO: Use regexp's conditional replace
+        return `"${content
+            .replace(/\n/g, '\\n')
+            .replace(/\t/g, '\\t')
+            .replace(/\f/g, '\\f')
+            .replace(/\r/g, '\\r')
+            .replace(/"/g, '""')}"`;
+    }
+    unescape(content) {
+        if (!content)
+            return '';
+        // TODO: Use regexp's conditional replace
+        return content
+            .replace(/\\n/g, '\n')
+            .replace(/\\t/g, '\t')
+            .replace(/\\f/g, '\f')
+            .replace(/\\r/g, '\r');
     }
 }
 exports.App = App;
@@ -77,6 +120,21 @@ class TransUnits {
     }
     get(key) {
         return this.units[key];
+    }
+    toString(lang, indent = 2, offset = '') {
+        let tab = '';
+        while (indent-- > 0) {
+            tab += ' ';
+        }
+        let output = '';
+        for (const k of this.keys) {
+            const item = this.units[k];
+            output += `${offset}<trans-unit id="${k}">\n${offset + tab}` +
+                (item.source ? `<source>${item.source}</source>\n` : '') +
+                (item[lang] ? `${offset + tab}<target>${item[lang]}</target>\n` : '') +
+                `${offset}</trans-unit>\n`;
+        }
+        return output;
     }
 }
 exports.TransUnits = TransUnits;
