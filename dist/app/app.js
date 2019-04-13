@@ -3,139 +3,107 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs_1 = require("fs");
 const csv_parser_1 = __importDefault(require("csv-parser"));
+const fs_1 = require("fs");
+const utils_1 = require("./utils");
+const xliff_1 = require("./xliff");
+/**
+ * An instance of App contains several operations of the passed translation files
+ *
+ * @author Abdulrahman M. Al'omar
+ */
 class App {
-    constructor(files) {
-        this.regex = {
-            lang: /<file((?!source-language=").|\n)+source-language="(\w+)"/,
-            units: /<trans-unit((?!id=").|\n)*id="([\w.]+)"((?!>).|\n)*>(((?!<\/trans-unit>).|\n)*)<\/trans-unit>/g,
-            source: /<source>(((?!<\/source>).|\n)*)<\/source>/,
-            target: /<target>(((?!<\/target>).|\n)*)<\/target>/,
-            csvUnescape: /\\[ntfrb]/,
-            csvEscape: /[\n\t\f\r\b]/,
-        };
-        this.fileContents = files.map(f => fs_1.readFileSync(f).toString());
+    /**
+     * @param paths Path to xliff files
+     */
+    constructor(paths) {
+        // Collection of xlf files for each language
+        this.xliffs = {};
+        // Array of fetched languages from input files
+        this.langs = [];
+        paths.forEach(path => {
+            const file = new xliff_1.Xliff.File(path);
+            this.langs.push(file.lang);
+            this.xliffs[file.lang] = file;
+        });
     }
-    ;
-    getTranslationUnits() {
-        const translations = new TransUnits();
-        for (const content of this.fileContents) {
-            const lang = content.match(this.regex.lang)[2];
-            translations.addLanguage(lang);
-            let matches;
-            while (matches = this.regex.units.exec(content)) {
-                const key = matches[2];
-                const inner = matches[4];
-                const sourceMatch = inner.match(this.regex.source);
-                const targetMatch = inner.match(this.regex.target);
-                const source = sourceMatch ? sourceMatch[1] : null;
-                const target = targetMatch ? targetMatch[1] : null;
-                translations.addTransUnit(lang, key, source, target);
-            }
-        }
-        return translations;
-    }
-    exportTranslationUnits(output, transUnits = this.getTranslationUnits()) {
+    /**
+     * Exports parsed translations as csv contains Key, Source, and a column for each languages
+     *
+     * @param outputPath The path of the csv file
+     */
+    exportTranslationUnits(outputPath) {
+        const units = this.parseUnits();
         let csv = 'Key,Source';
-        let j = 0;
-        for (const lang of transUnits.languages) {
-            csv += `,${lang.toUpperCase()}`;
-            j++;
+        for (let i = 0; i < this.langs.length; i++) {
+            csv += `,${this.langs[i].toUpperCase()}`;
         }
         csv += '\n';
         let i = 0;
-        for (const key of transUnits.keys) {
-            const item = transUnits.get(key);
-            csv += `${key},${this.escape(item.source)}`;
-            for (const lang of transUnits.languages) {
-                csv += `,${this.escape(item[lang])}`;
+        for (const id in units) {
+            const unit = units[id];
+            csv += `${id},${utils_1.CSV.escape(unit.source)}`;
+            for (const lang of this.langs) {
+                csv += `,${utils_1.CSV.escape(unit[lang])}`;
             }
             csv += '\n';
             i++;
         }
-        fs_1.writeFileSync(output, csv, { encoding: 'utf8' });
-        console.log(`CSV file generated successfully with ${i} translations of ${j} language(s)`);
+        fs_1.writeFileSync(outputPath, csv, { encoding: 'utf8' });
+        console.log(`CSV file generated successfully with ${i} translations of ${this.langs.length} language(s)`);
     }
-    importTranslationUnits(input) {
-        const translations = new TransUnits();
+    /**
+     * Imports csv file translations to the fetched xliff files and saves the changes
+     *
+     * @param input The path of the csv file
+     * @param overwrite overwrite the existing translation units content
+     */
+    importTranslationUnits(input, overwrite = true) {
+        const translations = {};
         fs_1.createReadStream(input).pipe(csv_parser_1.default({
-            mapHeaders: ({ header, index }) => {
-                const h = header.toLowerCase();
-                if (index > 1) {
-                    translations.addLanguage(h);
-                }
-                return h;
-            },
-            mapValues: ({ index, value }) => index > 0 ? this.unescape(value) : value
+            mapHeaders: ({ header }) => header.toLowerCase(),
+            mapValues: ({ index, value }) => index > 0 ? utils_1.CSV.unescape(value) : value
         })).on('data', (row) => {
             const { key, source } = row;
             for (const k in row) {
                 if (k === 'key' || k === 'source')
                     continue;
-                translations.addTransUnit(k, key, source, row[k]);
+                if (!translations[key]) {
+                    translations[key] = { source };
+                }
+                translations[key][k] = row[k];
             }
         }).on('end', () => {
-            fs_1.writeFileSync('test.xml', translations.toString('ar'), { encoding: 'utf8' });
+            for (const id in translations) {
+                const unit = translations[id];
+                const { source } = unit;
+                for (const key in unit) {
+                    if (key === 'source')
+                        continue;
+                    this.xliffs[key].appendTarget(id, source, unit[key], overwrite);
+                }
+            }
+            for (const lang of this.langs) {
+                this.xliffs[lang].saveChanges();
+            }
         });
     }
-    escape(content) {
-        if (!content)
-            return '';
-        // TODO: Use regexp's conditional replace
-        return `"${content
-            .replace(/\n/g, '\\n')
-            .replace(/\t/g, '\\t')
-            .replace(/\f/g, '\\f')
-            .replace(/\r/g, '\\r')
-            .replace(/"/g, '""')}"`;
-    }
-    unescape(content) {
-        if (!content)
-            return '';
-        // TODO: Use regexp's conditional replace
-        return content
-            .replace(/\\n/g, '\n')
-            .replace(/\\t/g, '\t')
-            .replace(/\\f/g, '\f')
-            .replace(/\\r/g, '\r');
+    /**
+     * Convert fetched xliff files to combined translation units
+     */
+    parseUnits() {
+        const translations = {};
+        for (const lang of this.langs) {
+            const file = this.xliffs[lang];
+            file.forEach((id, source, target) => {
+                if (!translations[id]) {
+                    translations[id] = { source };
+                }
+                translations[id][lang] = target;
+            });
+        }
+        return translations;
     }
 }
 exports.App = App;
-class TransUnits {
-    constructor() {
-        this.languages = new Array();
-        this.units = {};
-    }
-    get keys() {
-        return Object.keys(this.units);
-    }
-    addLanguage(lang) {
-        this.languages.push(lang);
-    }
-    addTransUnit(lang, key, source, target) {
-        this.units[key] = Object.assign({}, this.units[key], { [lang]: target });
-        if (source)
-            this.units[key].source = source;
-    }
-    get(key) {
-        return this.units[key];
-    }
-    toString(lang, indent = 2, offset = '') {
-        let tab = '';
-        while (indent-- > 0) {
-            tab += ' ';
-        }
-        let output = '';
-        for (const k of this.keys) {
-            const item = this.units[k];
-            output += `${offset}<trans-unit id="${k}">\n${offset + tab}` +
-                (item.source ? `<source>${item.source}</source>\n` : '') +
-                (item[lang] ? `${offset + tab}<target>${item[lang]}</target>\n` : '') +
-                `${offset}</trans-unit>\n`;
-        }
-        return output;
-    }
-}
-exports.TransUnits = TransUnits;
 //# sourceMappingURL=app.js.map

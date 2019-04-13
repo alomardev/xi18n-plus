@@ -9,7 +9,8 @@ const app_1 = require("./app/app");
 commander_1.default
     .arguments('<source-files...>')
     .option('-i, --input <file>', 'csv file to be imported')
+    .option('-n, --new', 'import only new translation keys')
     .parse(process.argv);
 const app = new app_1.App(commander_1.default.args);
-app.importTranslationUnits(commander_1.default.input);
+app.importTranslationUnits(commander_1.default.input, !commander_1.default.new);
 //# sourceMappingURL=index-import.js.map

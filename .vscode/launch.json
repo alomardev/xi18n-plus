@@ -7,10 +7,29 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Launch Program",
+      "name": "Export",
       "program": "${workspaceFolder}/dist/index-export.js",
       "cwd": "/Users/Abdulrahman/Projects/general/web/simpleng-test",
-      "args": ["-o", "src/locale/translations.csv", "src/locale/messages.ar.xlf","src/locale/messages.en.xlf"]
+      "args": [
+        "-o",
+        "src/locale/translations.csv",
+        "src/locale/messages.ar.xlf",
+        "src/locale/messages.en.xlf"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Import",
+      "program": "${workspaceFolder}/dist/index-import.js",
+      "cwd": "/Users/Abdulrahman/Projects/general/web/simpleng-test",
+      "args": [
+        "--only-new",
+        "-i",
+        "src/locale/translations.csv",
+        "src/locale/messages.ar.xlf",
+        "src/locale/messages.en.xlf",
+      ]
     }
   ]
 }

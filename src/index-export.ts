@@ -8,4 +8,4 @@ program
   .parse(process.argv);
 
 const app = new App(program.args);
-app.exportTranslationUnits(program.output)
+app.exportTranslationUnits(program.output);
