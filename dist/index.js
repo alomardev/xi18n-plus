@@ -6,7 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const commander_1 = __importDefault(require("commander"));
 commander_1.default
-    .version('0.0.1', '-v, --version')
+    .version('0.1.2', '-v, --version')
     .command('serve', 'serve a web page to manage translations', { isDefault: true })
     .command('export', 'export translation units to csv file')
     .command('import', 'import translation units from csv file')
