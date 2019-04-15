@@ -1,12 +1,12 @@
 {
   "name": "xi18n-plus",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Leveled-up Angular xi18n tool",
-  "main": "xi18n-plus.js",
+  "main": "./src/xi18n-plus.js",
   "scripts": {
     "build-ts": "tsc",
     "watch-ts": "tsc -w",
-    "publish": "rm -r src && tsc --sourceMap false && npm publish"
+    "upload": "rm -r src && tsc --sourceMap false && npm publish"
   },
   "repository": {
     "type": "git",
@@ -21,13 +21,13 @@
   "author": "Abdulrahman M. Alomar",
   "license": "MIT",
   "bin": {
-    "xi18n-plus": "xi18n-plus.js",
-    "xi18n-plus-serve": "xi18n-plus-serve.js",
-    "xi18n-plus-export": "xi18n-plus-export.js",
-    "xi18n-plus-import": "xi18n-plus-import.js",
-    "xi18n-plus-add": "xi18n-plus-add.js",
-    "xi18n-plus-update": "xi18n-plus-update.js",
-    "xi18n-plus-delete": "xi18n-plus-delete.js"
+    "xi18n-plus": "./src/xi18n-plus.js",
+    "xi18n-plus-serve": "./src/xi18n-plus-serve.js",
+    "xi18n-plus-export": "./src/xi18n-plus-export.js",
+    "xi18n-plus-import": "./src/xi18n-plus-import.js",
+    "xi18n-plus-add": "./src/xi18n-plus-add.js",
+    "xi18n-plus-update": "./src/xi18n-plus-update.js",
+    "xi18n-plus-delete": "./src/xi18n-plus-delete.js"
   },
   "bugs": {
     "url": "https://github.com/alomardev/xi18n-plus/issues"

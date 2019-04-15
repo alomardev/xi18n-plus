@@ -9,7 +9,7 @@
       "type": "node",
       "request": "launch",
       "name": "Export",
-      "program": "${workspaceFolder}/dist/xi18n-plus-export.js",
+      "program": "${workspaceFolder}/src/xi18n-plus-export.js",
       "cwd": "/Users/Abdulrahman/Projects/general/web/simpleng-test",
       "args": [
         "-o",
@@ -22,7 +22,7 @@
       "type": "node",
       "request": "launch",
       "name": "Import",
-      "program": "${workspaceFolder}/dist/xi18n-plus-import.js",
+      "program": "${workspaceFolder}/src/xi18n-plus-import.js",
       "cwd": "/Users/Abdulrahman/Projects/general/web/simpleng-test",
       "args": [
         "--only-new",
@@ -36,7 +36,7 @@
       "type": "node",
       "request": "launch",
       "name": "Add",
-      "program": "${workspaceFolder}/dist/xi18n-plus-add.js",
+      "program": "${workspaceFolder}/src/xi18n-plus-add.js",
       "cwd": "/Users/Abdulrahman/Projects/general/web/simpleng-test",
       "args": [
         "src/locale/messages.ar.xlf",

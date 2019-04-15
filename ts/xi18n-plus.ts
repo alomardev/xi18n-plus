@@ -2,7 +2,7 @@
 import program from 'commander';
 
 program
-  .version('0.1.5', '-v, --version')
+  .version('0.1.6', '-v, --version')
   .command('serve', 'serve a web page to manage translations', {isDefault: true})
   .command('export', 'export translation units to csv file')
   .command('import', 'import translation units from csv file')
