@@ -1,5 +1,5 @@
 import csv from 'csv-parser';
-import { createReadStream, writeFileSync } from 'fs';
+import { createReadStream, existsSync, writeFileSync } from 'fs';
 import { CSV } from './utils';
 import { Xliff } from './xliff';
 
@@ -13,11 +13,11 @@ type Units = { [key: string]: { source?: string, [key: string]: string } };
  */
 export class App {
 
+  // Array of fetched languages from input files
+  langs: string[] = [];
+
   // Collection of xlf files for each language
   private xliffs: { [key: string]: Xliff.File } = {};
-
-  // Array of fetched languages from input files
-  private langs: string[] = [];
 
   /**
    * @param paths Path to xliff files
@@ -36,27 +36,32 @@ export class App {
    * @param outputPath The path of the csv file
    */
   exportTranslationUnits(outputPath: string) {
-    const units = this.parseUnits();
+    return new Promise<number>((resolve, reject) => {
+      const units = this.parseUnits();
 
-    let csv = 'Key,Source';
-    for (let i = 0; i < this.langs.length; i++) {
-      csv += `,${this.langs[i].toUpperCase()}`;
-    }
-
-    csv += '\n';
-    let i = 0;
-    for (const id in units) {
-      const unit = units[id];
-      csv += `${id},${CSV.escape(unit.source)}`
-      for (const lang of this.langs) {
-        csv += `,${CSV.escape(unit[lang])}`;
+      let csv = 'Key,Source';
+      for (let i = 0; i < this.langs.length; i++) {
+        csv += `,${this.langs[i].toUpperCase()}`;
       }
-      csv += '\n';
-      i++;
-    }
 
-    writeFileSync(outputPath, csv, { encoding: 'utf8' });
-    console.log(`CSV file generated successfully with ${i} translations of ${this.langs.length} language(s)`);
+      csv += '\n';
+      let i = 0;
+      for (const id in units) {
+        const unit = units[id];
+        csv += `${id},${CSV.escape(unit.source)}`
+        for (const lang of this.langs) {
+          csv += `,${CSV.escape(unit[lang])}`;
+        }
+        csv += '\n';
+        i++;
+      }
+      try {
+        writeFileSync(outputPath, csv, { encoding: 'utf8' });
+        resolve(i);
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 
   /**
@@ -66,32 +71,57 @@ export class App {
    * @param overwrite overwrite the existing translation units content
    */
   importTranslationUnits(input: string, overwrite: boolean = true) {
-    const translations: Units = {};
-    createReadStream(input).pipe(csv({
-      mapHeaders: ({ header }) => header.toLowerCase(),
-      mapValues: ({ index, value }) => index > 0 ? CSV.unescape(value) : value
-    })).on('data', (row) => {
-      const { key, source } = row;
-      for (const k in row) {
-        if (k === 'key' || k === 'source') continue;
-        if (!translations[key]) {
-          translations[key] = { source };
-        }
-        translations[key][k] = row[k];
+    return new Promise((resolve, reject) => {
+      const translations: Units = {};
+      if (!existsSync(input)) {
+        reject(`The file ${input} doesn't exist`);
+        return;
       }
-    }).on('end', () => {
-      for (const id in translations) {
-        const unit = translations[id];
-        const { source } = unit;
-        for (const key in unit) {
-          if (key === 'source') continue
-          this.xliffs[key].appendTarget(id, source, unit[key], overwrite);
-        }
-      }
-      for (const lang of this.langs) {
-        this.xliffs[lang].saveChanges();
+      try {
+        createReadStream(input).pipe(csv({
+          mapHeaders: ({ header }) => header.toLowerCase(),
+          mapValues: ({ index, value }) => index > 0 ? CSV.unescape(value) : value
+        })).on('data', (row) => {
+          const { key, source } = row;
+          for (const k in row) {
+            if (k === 'key' || k === 'source') continue;
+            if (!translations[key]) {
+              translations[key] = { source };
+            }
+            translations[key][k] = row[k];
+          }
+        }).on('end', () => {
+          for (const id in translations) {
+            const unit = translations[id];
+            const { source } = unit;
+            for (const key in unit) {
+              if (key === 'source') continue
+              this.xliffs[key].appendTarget(id, source, unit[key], overwrite);
+            }
+          }
+          resolve(Object.keys(translations).length);
+        }).on('error', (err) => {
+          reject(err);
+        });
+      } catch (err) {
+        reject(err);
       }
     });
+  }
+
+  add(id: string, source: string, translations: {[key: string]: string}) {
+    for (const lang in translations) {
+      this.xliffs[lang].appendTarget(id, source, translations[lang]);
+    }
+  }
+
+  /**
+   * Save modified fetched xliff files
+   */
+  saveChanges() {
+    for (const lang of this.langs) {
+      this.xliffs[lang].saveChanges();
+    }
   }
 
   /**

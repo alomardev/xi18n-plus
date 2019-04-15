@@ -1,3 +1,5 @@
+import readline from 'readline';
+
 /**
  * Clone an object
  *
@@ -55,4 +57,34 @@ export namespace CSV {
     })}`;
   }
 
+}
+
+/**
+ * Recursive read inputs from the user
+ */
+export function ask(questions: string[]): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    if (!questions || questions.length == 0) {
+      reject('questions array should not be empty');
+      return;
+    }
+    const answers: string[] = [];
+
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    const iterate = (i: number) => {
+      if (i == questions.length) {
+        rl.close();
+        resolve(answers);
+        return;
+      }
+      rl.question(questions[i], (answer) => {
+        answers[i] = answer;
+        iterate(i+1);
+      })
+    };
+    iterate(0);
+  });
 }

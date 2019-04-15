@@ -11,5 +11,9 @@ commander_1.default
     .option('-o, --output <file>', 'output file')
     .parse(process.argv);
 const app = new app_1.App(commander_1.default.args);
-app.exportTranslationUnits(commander_1.default.output);
+app.exportTranslationUnits(commander_1.default.output).then(count => {
+    console.log(`${count} translations exported successfully to ${commander_1.default.output}`);
+}).catch((err) => {
+    console.error(`Couldn't export translations.`, err);
+});
 //# sourceMappingURL=index-export.js.map

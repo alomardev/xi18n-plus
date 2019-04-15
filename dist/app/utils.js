@@ -1,5 +1,9 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+const readline_1 = __importDefault(require("readline"));
 /**
  * Clone an object
  *
@@ -60,4 +64,33 @@ var CSV;
     }
     CSV.unescape = unescape;
 })(CSV = exports.CSV || (exports.CSV = {}));
+/**
+ * Recursive read inputs from the user
+ */
+function ask(questions) {
+    return new Promise((resolve, reject) => {
+        if (!questions || questions.length == 0) {
+            reject('questions array should not be empty');
+            return;
+        }
+        const answers = [];
+        const rl = readline_1.default.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+        const iterate = (i) => {
+            if (i == questions.length) {
+                rl.close();
+                resolve(answers);
+                return;
+            }
+            rl.question(questions[i], (answer) => {
+                answers[i] = answer;
+                iterate(i + 1);
+            });
+        };
+        iterate(0);
+    });
+}
+exports.ask = ask;
 //# sourceMappingURL=utils.js.map

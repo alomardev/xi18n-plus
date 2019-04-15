@@ -8,4 +8,8 @@ program
   .parse(process.argv);
 
 const app = new App(program.args);
-app.exportTranslationUnits(program.output);
+app.exportTranslationUnits(program.output).then(count => {
+  console.log(`${count} translations exported successfully to ${program.output}`);
+}).catch((err) => {
+  console.error(`Couldn't export translations.`, err);
+});
