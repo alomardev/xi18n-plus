@@ -36,8 +36,8 @@ export namespace Xliff {
       this.parsed = parser.parse(encodedContent, parserOptions);
       this.units = {};
       for(const unit of this.parsed.xliff.file.body['trans-unit']) {
-        if (unit.source) unit.source = he.decode(unit.source);
-        if (unit.target) unit.target = he.decode(unit.target);
+        if (unit.source) unit.source = he.decode(`${unit.source}`);
+        if (unit.target) unit.target = he.decode(`${unit.target}`);
         this.units[unit['attr.id']] = unit;
       }
     }

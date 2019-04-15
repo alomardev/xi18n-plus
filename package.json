@@ -1,6 +1,6 @@
 {
   "name": "xi18n-plus",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Leveled-up Angular xi18n tool",
   "main": "index.js",
   "scripts": {
@@ -20,20 +20,20 @@
   "author": "Abdulrahman M. Alomar",
   "license": "MIT",
   "bin": {
-    "xi18n-plus": "./dist/index.js",
-    "xi18n-plus-serve": "./dist/index-serve.js",
-    "xi18n-plus-export": "./dist/index-export.js",
-    "xi18n-plus-import": "./dist/index-import.js",
-    "xi18n-plus-add": "./dist/index-add.js",
-    "xi18n-plus-update": "./dist/index-update.js",
-    "xi18n-plus-delete": "./dist/index-delete.js"
+    "xi18n-plus": "./dist/xi18n-plus.js",
+    "xi18n-plus-serve": "./dist/xi18n-plus-serve.js",
+    "xi18n-plus-export": "./dist/xi18n-plus-export.js",
+    "xi18n-plus-import": "./dist/xi18n-plus-import.js",
+    "xi18n-plus-add": "./dist/xi18n-plus-add.js",
+    "xi18n-plus-update": "./dist/xi18n-plus-update.js",
+    "xi18n-plus-delete": "./dist/xi18n-plus-delete.js"
   },
   "bugs": {
     "url": "https://github.com/alomardev/xi18n-plus/issues"
   },
   "homepage": "https://github.com/alomardev/xi18n-plus#readme",
   "dependencies": {
-    "commander": "^2.19.0",
+    "commander": "^2.20.0",
     "csv-parser": "^2.2.0",
     "fast-xml-parser": "^3.12.16",
     "he": "^1.2.0"

@@ -30,9 +30,9 @@ var Xliff;
             this.units = {};
             for (const unit of this.parsed.xliff.file.body['trans-unit']) {
                 if (unit.source)
-                    unit.source = he_1.default.decode(unit.source);
+                    unit.source = he_1.default.decode(`${unit.source}`);
                 if (unit.target)
-                    unit.target = he_1.default.decode(unit.target);
+                    unit.target = he_1.default.decode(`${unit.target}`);
                 this.units[unit['attr.id']] = unit;
             }
         }
