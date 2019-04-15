@@ -74,4 +74,3 @@ var Xliff;
     }
     Xliff.File = File;
 })(Xliff = exports.Xliff || (exports.Xliff = {}));
-//# sourceMappingURL=xliff.js.map
