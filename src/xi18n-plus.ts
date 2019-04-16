@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 import program from 'commander';
-import { App } from './app/app';
-import { ask } from './app/utils';
+import { App } from './modules/app';
+import { ask } from './modules/utils';
+import { Server } from './modules/server';
 
-program.version('0.1.8', '-v, --version')
+program.version('0.1.9', '-v, --version')
 
 // Serve Command
 program.command('serve')
 .description('serve a web page to manage translations')
-.action((args, cmd) => {
-  console.log('Not implemented!');
+.option('-p, --port <port>', 'port to listen on')
+.action((cmd) => {
+  new Server().start(cmd.port);
 });
 
 // Export Command
