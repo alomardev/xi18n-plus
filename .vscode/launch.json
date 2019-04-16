@@ -4,14 +4,14 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
-
     {
       "type": "node",
       "request": "launch",
       "name": "Export",
-      "program": "${workspaceFolder}/src/xi18n-plus-export.js",
+      "program": "${workspaceFolder}/dist/xi18n-plus.js",
       "cwd": "/Users/Abdulrahman/Projects/general/web/simpleng-test",
       "args": [
+        "export",
         "-o",
         "src/locale/translations.csv",
         "src/locale/messages.ar.xlf",
@@ -22,9 +22,10 @@
       "type": "node",
       "request": "launch",
       "name": "Import",
-      "program": "${workspaceFolder}/src/xi18n-plus-import.js",
+      "program": "${workspaceFolder}/dist/xi18n-plus.js",
       "cwd": "/Users/Abdulrahman/Projects/general/web/simpleng-test",
       "args": [
+        "import",
         "--only-new",
         "-i",
         "src/locale/translations.csv",
@@ -36,9 +37,10 @@
       "type": "node",
       "request": "launch",
       "name": "Add",
-      "program": "${workspaceFolder}/src/xi18n-plus-add.js",
+      "program": "${workspaceFolder}/dist/xi18n-plus.js",
       "cwd": "/Users/Abdulrahman/Projects/general/web/simpleng-test",
       "args": [
+        "add",
         "src/locale/messages.ar.xlf",
         "src/locale/messages.en.xlf",
       ]

@@ -1,7 +1,7 @@
 {
   "compileOnSave": true,
   "include": [
-    "ts/**/*"
+    "src/**/*"
   ],
   "compilerOptions": {
     "module": "commonjs",
@@ -10,12 +10,12 @@
     "noImplicitAny": true,
     "moduleResolution": "node",
     "sourceMap": true,
-    "outDir": "src",
+    "outDir": "dist",
     "baseUrl": ".",
     "paths": {
       "*": [
         "node_modules/*",
-        "ts/types/*"
+        "src/types/*"
       ]
     }
   }
